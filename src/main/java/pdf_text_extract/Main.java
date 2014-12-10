@@ -1,4 +1,4 @@
-//Copyright (c) 2011, Thilo Planz. All rights reserved.
+//Copyright (c) 2011, 2014, Thilo Planz. All rights reserved.
 //
 //This program is free software: you can redistribute it and/or modify
 //it under the terms of the GNU Affero General Public License as
@@ -17,6 +17,7 @@ package pdf_text_extract;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 
 import com.itextpdf.text.pdf.PdfReader;
@@ -31,19 +32,30 @@ public class Main {
 			return;
 		}
 
-		File pdf = new File(argv[0]);
-		if (!pdf.canRead() || !pdf.isFile()) {
-			System.err.println("cannot read input file "
-					+ pdf.getAbsolutePath());
-			return;
+		PdfReader reader;
+		if ("-".equals(argv[0])) {
+			reader = new PdfReader(System.in);
+
+		} else {
+			File pdf = new File(argv[0]);
+			if (!pdf.canRead() || !pdf.isFile()) {
+				System.err.println("cannot read input file "
+						+ pdf.getAbsolutePath());
+				return;
+			}
+			reader = new PdfReader(pdf.getAbsolutePath());
 		}
-		PdfReader reader = new PdfReader(pdf.getAbsolutePath());
 		PdfReaderContentParser parser = new PdfReaderContentParser(reader);
 
 		int pageNumber = Integer.parseInt(argv[1]);
 
-		File outputFile = new File(argv[2]);
-		PrintWriter out = new PrintWriter(outputFile, "UTF-8");
+		PrintWriter out;
+		if ("-".equals(argv[2])) {
+			out = new PrintWriter(new OutputStreamWriter(System.out, "UTF-8"));
+		} else {
+			File outputFile = new File(argv[2]);
+			out = new PrintWriter(outputFile, "UTF-8");
+		}
 
 		parser.processContent(pageNumber, new DumpTextFragmentPositions(out));
 
@@ -55,10 +67,12 @@ public class Main {
 		System.err
 				.println("pdf_text_extract <pdf file name> <page number> <output file name>");
 		System.err
-				.println("   reads the specified PDF focument and writes the text fragments and their positions into the output file");
+				.println("   reads the specified PDF document and writes the text fragments and their positions into the output file");
+		System.err
+				.println("      you can use `-` instead of file names to process the standard output and input streams");
 		System.err.println();
 		System.err
-				.println("Copyright (c) 2011, Thilo Planz. All rights reserved.");
+				.println("Copyright (c) 2011, 2014, Thilo Planz. All rights reserved.");
 		System.err
 				.println("  This program is free software under the terms of the GNU Affero General Public License");
 		System.err
