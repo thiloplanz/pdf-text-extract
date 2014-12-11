@@ -22,12 +22,13 @@ import java.io.PrintWriter;
 
 import com.itextpdf.text.pdf.PdfReader;
 import com.itextpdf.text.pdf.parser.PdfReaderContentParser;
+import com.itextpdf.text.pdf.parser.RenderListener;
 
 public class Main {
 
 	public static void main(String[] argv) throws IOException {
 
-		if (argv.length != 3) {
+		if (argv.length != 3 && argv.length != 2) {
 			usage();
 			return;
 		}
@@ -47,17 +48,33 @@ public class Main {
 		}
 		PdfReaderContentParser parser = new PdfReaderContentParser(reader);
 
-		int pageNumber = Integer.parseInt(argv[1]);
+		Integer pageNumber;
+		String outputFilename;
+		if (argv.length == 3) {
+			pageNumber = Integer.parseInt(argv[1]);
+			outputFilename = argv[2];
+		} else {
+			pageNumber = null;
+			outputFilename = argv[1];
+		}
 
 		PrintWriter out;
-		if ("-".equals(argv[2])) {
+		if ("-".equals(outputFilename)) {
 			out = new PrintWriter(new OutputStreamWriter(System.out, "UTF-8"));
 		} else {
-			File outputFile = new File(argv[2]);
+			File outputFile = new File(outputFilename);
 			out = new PrintWriter(outputFile, "UTF-8");
 		}
 
-		parser.processContent(pageNumber, new DumpTextFragmentPositions(out));
+		RenderListener dumper = new DumpTextFragmentPositions(out);
+
+		if (pageNumber != null) {
+			parser.processContent(pageNumber, dumper);
+		} else {
+			int pages = reader.getNumberOfPages();
+			for (int p = 0; p < pages; p++)
+				parser.processContent(p+1, dumper);
+		}
 
 		out.close();
 		reader.close();
@@ -65,11 +82,14 @@ public class Main {
 
 	private static void usage() {
 		System.err
-				.println("pdf_text_extract <pdf file name> <page number> <output file name>");
+				.println("pdf_text_extract <pdf file name> [page number] <output file name>");
 		System.err
 				.println("   reads the specified PDF document and writes the text fragments and their positions into the output file");
 		System.err
 				.println("      you can use `-` instead of file names to process the standard output and input streams");
+		System.err
+				.println("      the page number is optional, if missing all pages in the PDF are processed");
+
 		System.err.println();
 		System.err
 				.println("Copyright (c) 2011, 2014, Thilo Planz. All rights reserved.");
